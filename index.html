@@ -13,9 +13,20 @@
     --dim:#8b949e;
     --border:#2a2f36;
     --card:#161b22;
+    --danger:#ff4d4d;
 }
 *{box-sizing:border-box;margin:0;padding:0;font-family:system-ui;-webkit-tap-highlight-color:transparent;}
 body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:center;min-height:100vh;}
+
+#customAlert{
+    position:fixed;top:-100px;left:50%;transform:translateX(-50%);
+    background:var(--danger);color:white;padding:14px 22px;border-radius:14px;
+    font-weight:bold;display:flex;align-items:center;gap:15px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.5);z-index:9999;
+    transition:top .4s cubic-bezier(.18,.89,.32,1.28);
+}
+#customAlert.show{top:20px;}
+
 .app-card{background:var(--card);width:92%;max-width:400px;padding:1.8rem;border-radius:30px;border:2px solid rgba(255,255,255,0.08);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
 h1{color:var(--accent);margin-bottom:1rem;font-size:2.2rem;}
 
@@ -34,7 +45,7 @@ input, select{
     display:flex;justify-content:space-between;margin-bottom:6px;border:1px solid rgba(255,255,255,0.1);
 }
 
-/* 🔻 Themed Scrollbar */
+/* Scrollbar */
 #playerList::-webkit-scrollbar { width:6px; }
 #playerList::-webkit-scrollbar-track { background:#0d1117; border-radius:10px; }
 #playerList::-webkit-scrollbar-thumb { background:#2a2f36; border-radius:10px; border:1px solid #0d1117; }
@@ -65,6 +76,11 @@ input, select{
 </style>
 </head>
 <body>
+
+<div id="customAlert">
+    <span id="alertMsg">Alert</span>
+    <span onclick="hideAlert()" style="cursor:pointer;font-size:1.4rem;">×</span>
+</div>
 
 <div class="app-card">
 
@@ -108,10 +124,25 @@ let players = [];
 let roles = [];
 let current = 0;
 
+/* Popup Alert */
+function showAlert(msg){
+    const box = document.getElementById("customAlert");
+    document.getElementById("alertMsg").innerText = msg;
+    box.classList.add("show");
+    setTimeout(hideAlert, 3000);
+}
+function hideAlert(){ document.getElementById("customAlert").classList.remove("show"); }
+
 function addPlayer(){
     const input = document.getElementById('nameInput');
     const name = input.value.trim();
     if(!name) return;
+
+    if(players.some(p => p.toLowerCase() === name.toLowerCase())){
+        showAlert("That name is already in the game!");
+        return;
+    }
+
     players.push(name);
     input.value='';
     renderPlayers();
@@ -130,7 +161,7 @@ function startGame(){
     const mafiaNum = parseInt(document.getElementById('mafiaCount').value);
 
     if(players.length < mafiaNum + 2){ 
-        alert("You need at least Mafia + Doctor + Detective + 1 Citizen");
+        showAlert("Need Mafia + Doctor + Detective + 1 Citizen minimum!");
         return; 
     }
 
