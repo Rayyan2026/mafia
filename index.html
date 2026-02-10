@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mafia Night</title>
+
+<style>
+:root{
+    --bg:#0b0f14;
+    --accent:#ff3b3b;
+    --text:#e6edf3;
+    --dim:#8b949e;
+    --border:#2a2f36;
+    --card:#161b22;
+}
+*{box-sizing:border-box;margin:0;padding:0;font-family:system-ui;-webkit-tap-highlight-color:transparent;}
+body{background:var(--bg);color:var(--text);display:flex;justify-content:center;align-items:center;min-height:100vh;}
+.app-card{background:var(--card);width:92%;max-width:400px;padding:1.8rem;border-radius:30px;border:2px solid rgba(255,255,255,0.08);text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.8);}
+h1{color:var(--accent);margin-bottom:1rem;font-size:2.2rem;}
+
+input, select{
+    width:100%;padding:14px;border-radius:14px;
+    border:1px solid var(--border);background:#000;color:white;font-size:16px;
+}
+.input-row{display:flex;gap:8px;margin-bottom:12px;position:relative;}
+.add-btn{
+    position:absolute;right:6px;top:50%;transform:translateY(-50%);
+    width:38px;height:38px;background:var(--accent);border:none;border-radius:50%;color:white;font-size:20px;cursor:pointer;
+}
+
+.player-badge{
+    background:rgba(0,0,0,0.4);padding:10px 14px;border-radius:14px;
+    display:flex;justify-content:space-between;margin-bottom:6px;border:1px solid rgba(255,255,255,0.1);
+}
+
+/* 🔻 Themed Scrollbar */
+#playerList::-webkit-scrollbar { width:6px; }
+#playerList::-webkit-scrollbar-track { background:#0d1117; border-radius:10px; }
+#playerList::-webkit-scrollbar-thumb { background:#2a2f36; border-radius:10px; border:1px solid #0d1117; }
+#playerList::-webkit-scrollbar-thumb:hover { background:#3a3f46; }
+#playerList { scrollbar-width:thin; scrollbar-color:#2a2f36 #0d1117; }
+
+.action-btn{
+    width:100%;padding:16px;border-radius:16px;border:none;
+    background:var(--accent);color:white;font-weight:bold;font-size:1rem;margin-top:15px;cursor:pointer;
+}
+
+.hold-btn{
+    width:100%;height:130px;border-radius:24px;border:1px solid rgba(255,255,255,0.2);
+    background:rgba(0,0,0,0.4);color:white;font-size:1.2rem;font-weight:900;margin:20px 0;cursor:pointer;
+}
+
+.secret-box{
+    height:90px;display:flex;align-items:center;justify-content:center;
+    font-size:1.7rem;font-weight:900;background:rgba(0,0,0,0.6);
+    border-radius:24px;border:2px dashed rgba(255,255,255,0.2);margin-bottom:15px;text-transform:uppercase;
+}
+
+.hidden{display:none;}
+.role-mafia{color:#ff4d4d;border-color:#ff4d4d;}
+.role-doctor{color:#4dd2ff;border-color:#4dd2ff;}
+.role-detective{color:#ffd24d;border-color:#ffd24d;}
+.role-citizen{color:#aaa;border-color:#aaa;}
+</style>
+</head>
+<body>
+
+<div class="app-card">
+
+<div id="setup">
+    <h1>Mafia Night</h1>
+
+    <div class="input-row">
+        <input id="nameInput" placeholder="Add Player Name">
+        <button class="add-btn" onclick="addPlayer()">+</button>
+    </div>
+    <div id="playerList" style="max-height:140px;overflow:auto;"></div>
+
+    <label style="font-size:.7rem;color:var(--dim);font-weight:bold;">NUMBER OF MAFIA</label>
+    <select id="mafiaCount">
+        <option value="1">1 Mafia</option>
+        <option value="2">2 Mafia</option>
+        <option value="3">3 Mafia</option>
+    </select>
+
+    <button class="action-btn" onclick="startGame()">START GAME</button>
+</div>
+
+<div id="reveal" class="hidden">
+    <h2 id="playerLabel"></h2>
+    <p style="color:var(--dim);font-size:.8rem;">Hold to reveal your role</p>
+    <div id="roleBox" class="secret-box">LOCKED</div>
+    <button id="holdBtn" class="hold-btn">HOLD TO REVEAL</button>
+    <button class="action-btn hidden" id="nextBtn" onclick="nextPlayer()">NEXT</button>
+</div>
+
+<div id="done" class="hidden">
+    <h1>All Roles Given</h1>
+    <p style="color:var(--dim);margin-bottom:15px;">Let the night begin 😈</p>
+    <button class="action-btn" onclick="resetGame()">NEW GAME</button>
+</div>
+
+</div>
+
+<script>
+let players = [];
+let roles = [];
+let current = 0;
+
+function addPlayer(){
+    const input = document.getElementById('nameInput');
+    const name = input.value.trim();
+    if(!name) return;
+    players.push(name);
+    input.value='';
+    renderPlayers();
+}
+
+function renderPlayers(){
+    document.getElementById('playerList').innerHTML =
+        players.map((p,i)=>`<div class="player-badge">${p}<span onclick="removePlayer(${i})" style="color:red;cursor:pointer;">✕</span></div>`).join('');
+}
+
+function removePlayer(i){ players.splice(i,1); renderPlayers(); }
+
+function shuffle(arr){ return arr.sort(()=>Math.random()-0.5); }
+
+function startGame(){
+    const mafiaNum = parseInt(document.getElementById('mafiaCount').value);
+
+    if(players.length < mafiaNum + 2){ 
+        alert("You need at least Mafia + Doctor + Detective + 1 Citizen");
+        return; 
+    }
+
+    roles = ["Doctor","Detective"];
+    for(let i=0;i<mafiaNum;i++) roles.push("Mafia");
+    while(roles.length < players.length) roles.push("Citizen");
+
+    roles = shuffle(roles);
+    current=0;
+
+    document.getElementById('setup').classList.add('hidden');
+    document.getElementById('reveal').classList.remove('hidden');
+    updateReveal();
+}
+
+function updateReveal(){
+    document.getElementById('playerLabel').innerText = players[current];
+    const box = document.getElementById('roleBox');
+    box.innerText="LOCKED";
+    box.className="secret-box";
+    document.getElementById('nextBtn').classList.add('hidden');
+}
+
+const holdBtn = document.getElementById('holdBtn');
+
+holdBtn.onpointerdown = ()=>{
+    const role = roles[current];
+    const box = document.getElementById('roleBox');
+    box.innerText = role.toUpperCase();
+    box.classList.add("role-"+role.toLowerCase());
+    document.getElementById('nextBtn').classList.remove('hidden');
+};
+
+holdBtn.onpointerup = ()=>{
+    const box = document.getElementById('roleBox');
+    box.innerText="LOCKED";
+    box.className="secret-box";
+};
+
+function nextPlayer(){
+    current++;
+    if(current < players.length){
+        updateReveal();
+    } else {
+        document.getElementById('reveal').classList.add('hidden');
+        document.getElementById('done').classList.remove('hidden');
+    }
+}
+
+function resetGame(){
+    document.getElementById('done').classList.add('hidden');
+    document.getElementById('setup').classList.remove('hidden');
+}
+
+document.getElementById('nameInput').addEventListener("keypress", e=>{ if(e.key==="Enter") addPlayer(); });
+</script>
+
+</body>
+</html>
